@@ -1,0 +1,2819 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CENTRO Platform v5.1 - Complete System</title>
+    <style>
+        :root {
+            --grid: 8px;
+            --phi: 1.618;
+            --sidebar-width: 320px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --monospace: 'SF Mono', 'Monaco', 'Inconsolata', 'Courier New', monospace;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--monospace);
+            background: #f8f8f8;
+            color: #000;
+            font-size: 11px;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Grid Overlay */
+        .grid-overlay {
+            position: fixed;
+            inset: 0;
+            background-image: 
+                linear-gradient(rgba(0,0,0,0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,0,0,0.02) 1px, transparent 1px);
+            background-size: var(--grid) var(--grid);
+            pointer-events: none;
+            z-index: 9999;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .grid-overlay.active { opacity: 1; }
+
+        /* Status Bar */
+        .status-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 24px;
+            background: #000;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            font-size: 9px;
+            z-index: 10000;
+            letter-spacing: 0.5px;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-right: 24px;
+        }
+
+        .status-indicator {
+            width: 6px;
+            height: 6px;
+            background: #0f0;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.warning { background: #ff0; }
+        .status-indicator.error { background: #f00; }
+        .status-indicator.offline { background: #888; }
+
+        .status-bar .ml-auto { margin-left: auto; }
+
+        /* Sidebar */
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 24px;
+            bottom: 0;
+            width: var(--sidebar-width);
+            background: #000;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .logo {
+            padding: 24px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            font-size: 18px;
+            letter-spacing: 4px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .logo::before {
+            content: '';
+            width: 24px;
+            height: 24px;
+            border: 2px solid #fff;
+            transform: rotate(45deg);
+        }
+
+        .version-badge {
+            margin-left: auto;
+            font-size: 8px;
+            padding: 2px 6px;
+            border: 1px solid rgba(255,255,255,0.3);
+            opacity: 0.5;
+        }
+
+        /* Role Switcher */
+        .role-switcher {
+            padding: 12px 24px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .role-select {
+            width: 100%;
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 4px 8px;
+            font-family: var(--monospace);
+            font-size: 10px;
+        }
+
+        /* Navigation */
+        .nav-modules {
+            flex: 1;
+            padding: 16px 0;
+        }
+
+        .nav-module { margin-bottom: 2px; }
+
+        .nav-header {
+            display: flex;
+            align-items: center;
+            padding: 12px 24px;
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+            user-select: none;
+        }
+
+        .nav-header:hover { background: rgba(255,255,255,0.05); }
+        .nav-header.active { background: rgba(255,255,255,0.1); }
+        .nav-header.active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: #fff;
+        }
+
+        .nav-index {
+            width: 20px;
+            opacity: 0.4;
+            font-size: 9px;
+        }
+
+        .nav-title {
+            flex: 1;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+        }
+
+        .nav-arrow {
+            opacity: 0.4;
+            transition: transform 0.3s;
+        }
+
+        .nav-header.expanded .nav-arrow { transform: rotate(90deg); }
+
+        .nav-submenu {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            background: rgba(255,255,255,0.03);
+        }
+
+        .nav-submenu.active { max-height: 1000px; }
+
+        .nav-subitem {
+            display: block;
+            padding: 10px 24px 10px 48px;
+            color: rgba(255,255,255,0.6);
+            text-decoration: none;
+            font-size: 10px;
+            transition: var(--transition);
+            position: relative;
+            cursor: pointer;
+        }
+
+        .nav-subitem:hover {
+            color: #fff;
+            background: rgba(255,255,255,0.05);
+        }
+
+        .nav-subitem.active {
+            color: #fff;
+            background: rgba(255,255,255,0.08);
+        }
+
+        .nav-subitem::before {
+            content: '·';
+            position: absolute;
+            left: 36px;
+            opacity: 0.3;
+        }
+
+        /* Main */
+        .main {
+            margin-left: var(--sidebar-width);
+            margin-top: 24px;
+            min-height: calc(100vh - 24px);
+            background: #fafafa;
+        }
+
+        /* Header */
+        .header {
+            background: #fff;
+            height: 56px;
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            padding: 0 32px;
+            position: sticky;
+            top: 24px;
+            z-index: 100;
+        }
+
+        .breadcrumbs {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 11px;
+        }
+
+        .breadcrumb-separator { opacity: 0.3; }
+        .breadcrumb-current {
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+
+        .header-actions {
+            margin-left: auto;
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 6px 16px;
+            border: 1px solid #000;
+            background: transparent;
+            font-family: inherit;
+            font-size: 10px;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            transition: var(--transition);
+            text-transform: uppercase;
+            position: relative;
+        }
+
+        .btn:hover {
+            background: #000;
+            color: #fff;
+        }
+
+        .btn.primary {
+            background: #000;
+            color: #fff;
+        }
+
+        .btn.primary:hover {
+            background: transparent;
+            color: #000;
+        }
+
+        .btn.danger {
+            border-color: #f00;
+            color: #f00;
+        }
+
+        .btn.danger:hover {
+            background: #f00;
+            color: #fff;
+        }
+
+        .btn.success {
+            border-color: #0a0;
+            color: #0a0;
+        }
+
+        .btn.success:hover {
+            background: #0a0;
+            color: #fff;
+        }
+
+        .btn-badge {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            background: #f00;
+            color: #fff;
+            font-size: 8px;
+            padding: 2px 4px;
+            border-radius: 2px;
+        }
+
+        /* Content */
+        .content { padding: 32px; }
+
+        .page {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .page.active { display: block; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .page-header { margin-bottom: 32px; }
+
+        .page-title {
+            font-size: 24px;
+            font-weight: 300;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .page-desc {
+            font-size: 12px;
+            opacity: 0.6;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 24px;
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+            margin-bottom: 24px;
+            overflow-x: auto;
+        }
+
+        .tab {
+            padding: 12px 0;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            position: relative;
+            opacity: 0.6;
+            transition: var(--transition);
+            white-space: nowrap;
+        }
+
+        .tab:hover { opacity: 1; }
+        .tab.active { opacity: 1; }
+        .tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #000;
+        }
+
+        /* Metrics */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .metric-card {
+            background: #fff;
+            border: 1px solid rgba(0,0,0,0.1);
+            padding: 20px;
+            transition: var(--transition);
+            position: relative;
+            cursor: pointer;
+        }
+
+        .metric-card:hover {
+            border-color: #000;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 0 #000;
+        }
+
+        .metric-value {
+            font-size: 24px;
+            font-weight: 300;
+            margin-bottom: 4px;
+        }
+
+        .metric-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            opacity: 0.6;
+        }
+
+        .metric-change {
+            font-size: 10px;
+            margin-top: 8px;
+        }
+
+        .metric-change.positive { color: #0a0; }
+        .metric-change.negative { color: #f00; }
+
+        .metric-live {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 6px;
+            height: 6px;
+            background: #0f0;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        /* Actions */
+        .actions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 12px;
+            margin-bottom: 32px;
+        }
+
+        .action-card {
+            background: #fff;
+            border: 1px solid #000;
+            padding: 16px;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .action-card:hover {
+            background: #000;
+            color: #fff;
+        }
+
+        .action-icon {
+            width: 24px;
+            height: 24px;
+            border: 1px solid currentColor;
+            position: relative;
+        }
+
+        /* Tables */
+        .section { margin-bottom: 32px; }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .section-title {
+            font-size: 12px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .data-table {
+            width: 100%;
+            background: #fff;
+            border: 1px solid rgba(0,0,0,0.1);
+            border-collapse: collapse;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .data-table th {
+            background: rgba(0,0,0,0.02);
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: normal;
+        }
+
+        .data-table tbody tr {
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .data-table tbody tr:hover { background: rgba(0,0,0,0.02); }
+
+        .status {
+            display: inline-block;
+            padding: 2px 8px;
+            font-size: 9px;
+            letter-spacing: 0.5px;
+            border: 1px solid currentColor;
+        }
+
+        .status.success { 
+            background: rgba(0,255,0,0.1);
+            color: #0a0;
+            border-color: #0a0;
+        }
+        .status.warning { 
+            background: rgba(255,255,0,0.1);
+            color: #aa0;
+            border-color: #aa0;
+        }
+        .status.error { 
+            background: rgba(255,0,0,0.1);
+            color: #f00;
+            border-color: #f00;
+        }
+        .status.info { 
+            background: rgba(0,100,255,0.1);
+            color: #06f;
+            border-color: #06f;
+        }
+        .status.pending {
+            background: rgba(128,128,128,0.1);
+            color: #888;
+            border-color: #888;
+        }
+
+        /* Dispatcher Board */
+        .dispatcher-container {
+            display: grid;
+            grid-template-columns: 1fr 2fr 1fr;
+            gap: 24px;
+            height: calc(100vh - 200px);
+        }
+
+        .dispatcher-panel {
+            background: #fff;
+            border: 1px solid rgba(0,0,0,0.1);
+            overflow-y: auto;
+        }
+
+        .dispatcher-header {
+            padding: 16px;
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            background: #fff;
+        }
+
+        .order-card {
+            padding: 16px;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            cursor: move;
+            transition: var(--transition);
+        }
+
+        .order-card:hover { background: rgba(0,0,0,0.02); }
+        .order-card.dragging { opacity: 0.5; }
+        .order-card.selected { background: rgba(0,0,0,0.05); }
+
+        .order-id {
+            font-size: 12px;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .order-info {
+            font-size: 10px;
+            opacity: 0.6;
+            margin-bottom: 8px;
+        }
+
+        .order-timer {
+            font-size: 10px;
+            color: #f00;
+        }
+
+        .courier-card {
+            padding: 16px;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            transition: var(--transition);
+            cursor: pointer;
+        }
+
+        .courier-card:hover { background: rgba(0,0,0,0.02); }
+        
+        .courier-name {
+            font-size: 11px;
+            margin-bottom: 4px;
+        }
+
+        .courier-stats {
+            display: flex;
+            gap: 16px;
+            font-size: 9px;
+            opacity: 0.6;
+        }
+
+        /* Map */
+        .map-container {
+            background: #000;
+            color: #0f0;
+            font-family: var(--monospace);
+            padding: 16px;
+            position: relative;
+            height: 400px;
+            overflow: hidden;
+        }
+
+        .map-grid {
+            position: absolute;
+            inset: 0;
+            background-image: 
+                linear-gradient(rgba(0,255,0,0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,255,0,0.1) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        .map-point {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #0f0;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            animation: pulse 2s infinite;
+        }
+
+        .map-point.branch { 
+            background: #ff0;
+            width: 12px;
+            height: 12px;
+        }
+        .map-point.courier { background: #0ff; }
+        .map-point.order { background: #f0f; }
+
+        .map-legend {
+            position: absolute;
+            bottom: 16px;
+            left: 16px;
+            font-size: 9px;
+            background: rgba(0,0,0,0.8);
+            padding: 8px;
+            border: 1px solid #0f0;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+
+        .legend-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        /* Forms */
+        .form-section {
+            background: #fff;
+            padding: 24px;
+            border: 1px solid rgba(0,0,0,0.1);
+            margin-bottom: 24px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .form-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            opacity: 0.6;
+        }
+
+        .form-label.required::after {
+            content: '*';
+            color: #f00;
+            margin-left: 4px;
+        }
+
+        .form-input,
+        .form-select,
+        .form-textarea {
+            padding: 8px;
+            border: 1px solid rgba(0,0,0,0.2);
+            background: transparent;
+            font-family: inherit;
+            font-size: 11px;
+            transition: var(--transition);
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .form-input:focus,
+        .form-select:focus,
+        .form-textarea:focus {
+            outline: none;
+            border-color: #000;
+        }
+
+        .form-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+
+        /* Filters Panel */
+        .filters-panel {
+            background: #fff;
+            border: 1px solid rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 24px;
+            display: none;
+        }
+
+        .filters-panel.active { display: block; }
+
+        /* Charts */
+        .chart-container {
+            background: #fff;
+            border: 1px solid rgba(0,0,0,0.1);
+            padding: 24px;
+            margin-bottom: 24px;
+            height: 300px;
+            position: relative;
+        }
+
+        .chart-placeholder {
+            position: absolute;
+            inset: 24px;
+            border: 1px dashed rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            opacity: 0.5;
+        }
+
+        /* Kitchen Display */
+        .kds-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .kds-order {
+            background: #000;
+            color: #0f0;
+            padding: 16px;
+            border: 1px solid #0f0;
+            font-family: var(--monospace);
+        }
+
+        .kds-order.urgent {
+            border-color: #f00;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .kds-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid currentColor;
+        }
+
+        .kds-timer {
+            color: #ff0;
+        }
+
+        .kds-item {
+            margin-bottom: 4px;
+            padding-left: 12px;
+        }
+
+        .kds-mod {
+            font-size: 9px;
+            opacity: 0.7;
+            padding-left: 24px;
+        }
+
+        /* Modal */
+        .modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .modal.active { display: flex; }
+
+        .modal-content {
+            background: #fff;
+            padding: 32px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            letter-spacing: 1px;
+        }
+
+        .modal-close {
+            width: 24px;
+            height: 24px;
+            border: 1px solid #000;
+            background: transparent;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .modal-close::before,
+        .modal-close::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 12px;
+            height: 1px;
+            background: #000;
+            transform: translate(-50%, -50%) rotate(45deg);
+        }
+
+        .modal-close::after {
+            transform: translate(-50%, -50%) rotate(-45deg);
+        }
+
+        .modal-body { margin-bottom: 24px; }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        /* Notifications Panel */
+        .notifications-panel {
+            position: fixed;
+            top: 24px;
+            right: -400px;
+            width: 400px;
+            height: calc(100vh - 24px);
+            background: #fff;
+            border-left: 1px solid rgba(0,0,0,0.1);
+            z-index: 999;
+            transition: right 0.3s ease;
+            overflow-y: auto;
+        }
+
+        .notifications-panel.active { right: 0; }
+
+        .notifications-header {
+            padding: 24px;
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .notification-item {
+            padding: 16px 24px;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .notification-item:hover { background: rgba(0,0,0,0.02); }
+
+        .notification-item.unread {
+            background: rgba(0,100,255,0.05);
+            border-left: 3px solid #06f;
+        }
+
+        .notification-time {
+            font-size: 9px;
+            opacity: 0.5;
+            margin-bottom: 4px;
+        }
+
+        .notification-title {
+            font-size: 11px;
+            margin-bottom: 4px;
+        }
+
+        .notification-text {
+            font-size: 10px;
+            opacity: 0.7;
+        }
+
+        /* Security Badge */
+        .security-badge {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            padding: 8px 16px;
+            background: #000;
+            color: #fff;
+            font-size: 9px;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            z-index: 900;
+        }
+
+        .security-icon {
+            width: 12px;
+            height: 12px;
+            border: 1px solid #0f0;
+            position: relative;
+        }
+
+        /* Quick Actions */
+        .quick-actions {
+            position: fixed;
+            bottom: 24px;
+            left: var(--sidebar-width);
+            margin-left: 24px;
+            display: flex;
+            gap: 12px;
+        }
+
+        .quick-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: #000;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: var(--transition);
+        }
+
+        .quick-btn:hover {
+            transform: scale(1.1);
+            background: #333;
+        }
+
+        /* Offline Mode */
+        .offline-banner {
+            background: #ff0;
+            color: #000;
+            padding: 8px;
+            text-align: center;
+            font-size: 10px;
+            font-weight: 500;
+            display: none;
+        }
+
+        body.offline .offline-banner { display: block; }
+        body.offline .status-indicator { background: #888; }
+
+        /* Print Styles */
+        @media print {
+            .sidebar, .header, .status-bar, .security-badge, .quick-actions {
+                display: none;
+            }
+            .main {
+                margin-left: 0;
+                margin-top: 0;
+            }
+        }
+
+        /* Loading */
+        .loading {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid rgba(0,0,0,0.1);
+            border-top-color: #000;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Tab Content */
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <!-- Grid Overlay -->
+    <div class="grid-overlay"></div>
+
+    <!-- Status Bar -->
+    <div class="status-bar">
+        <div class="status-item">
+            <span class="status-indicator"></span>
+            <span id="system-status">СИСТЕМА ONLINE</span>
+        </div>
+        <div class="status-item">
+            <span>ТОЧКА: <span id="current-branch">Центральная</span></span>
+        </div>
+        <div class="status-item">
+            <span>СМЕНА: <span id="shift-number">#2847</span></span>
+        </div>
+        <div class="status-item">
+            <span>ЗАКАЗОВ: <span id="orders-count">127</span></span>
+        </div>
+        <div class="status-item">
+            <span>КУРЬЕРОВ: <span id="couriers-status">12/15</span></span>
+        </div>
+        <div class="status-item ml-auto">
+            <span id="current-time">18.09.2025 14:32:47</span>
+        </div>
+    </div>
+
+    <!-- Offline Banner -->
+    <div class="offline-banner">
+        OFFLINE РЕЖИМ - Работа с локальным снепшотом. Последняя синхронизация: <span id="last-sync">2 мин назад</span>
+    </div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="logo">
+            CENTRO
+            <span class="version-badge">v5.1</span>
+        </div>
+        
+        <!-- Role Switcher -->
+        <div class="role-switcher">
+            <select class="role-select" id="roleSelect">
+                <option value="admin">Администратор</option>
+                <option value="director">Директор</option>
+                <option value="ops">Операционный менеджер</option>
+                <option value="chef">Шеф-повар</option>
+                <option value="cashier">Кассир</option>
+                <option value="dispatcher">Диспетчер</option>
+                <option value="auditor">Аудитор качества</option>
+                <option value="marketer">Маркетолог</option>
+            </select>
+        </div>
+
+        <nav class="nav-modules" id="navModules"></nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main">
+        <header class="header">
+            <div class="breadcrumbs">
+                <span>CENTRO</span>
+                <span class="breadcrumb-separator">/</span>
+                <span id="module-breadcrumb">Dashboard</span>
+                <span class="breadcrumb-separator" id="sub-separator" style="display:none">/</span>
+                <span id="sub-breadcrumb"></span>
+            </div>
+            <div class="header-actions">
+                <button class="btn" onclick="toggleFilters()">Фильтры</button>
+                <button class="btn" onclick="exportData()">Экспорт</button>
+                <button class="btn" onclick="toggleNotifications()">
+                    Уведомления
+                    <span class="btn-badge" id="notificationBadge">3</span>
+                </button>
+                <button class="btn primary" id="main-action" onclick="showCreateModal()">+ Создать</button>
+            </div>
+        </header>
+
+        <div class="content" id="content">
+            <!-- Pages will be dynamically loaded here -->
+        </div>
+    </main>
+
+    <!-- Notifications Panel -->
+    <div class="notifications-panel" id="notificationsPanel">
+        <div class="notifications-header">
+            <h3>Уведомления</h3>
+            <button class="modal-close" onclick="toggleNotifications()"></button>
+        </div>
+        <div id="notificationsList"></div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+        <button class="quick-btn" onclick="quickOrder()" title="Быстрый заказ">+</button>
+        <button class="quick-btn" onclick="quickSearch()" title="Поиск">🔍</button>
+        <button class="quick-btn" onclick="quickHelp()" title="Помощь">?</button>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modalTitle">Заголовок</h2>
+                <button class="modal-close" onclick="closeModal()"></button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Dynamic content -->
+            </div>
+            <div class="modal-footer" id="modalFooter">
+                <button class="btn" onclick="closeModal()">Отмена</button>
+                <button class="btn primary" onclick="saveModal()">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Security Badge -->
+    <div class="security-badge" onclick="showSecurityInfo()">
+        <div class="security-icon"></div>
+        <span>2FA ENABLED • SSL • RBAC</span>
+    </div>
+
+    <script>
+        // Data structures
+        const modules = [
+            {
+                id: 'dashboard',
+                index: '00',
+                title: 'Dashboard',
+                submenu: [
+                    'KPI реального времени',
+                    'Быстрые действия',
+                    'Алерты и уведомления'
+                ]
+            },
+            {
+                id: 'sales',
+                index: '01',
+                title: 'Sales',
+                submenu: [
+                    'Онлайн-заказы',
+                    'Зал и столы',
+                    'Карта зала',
+                    'Бронирования',
+                    'Доставка и курьеры',
+                    'Маршруты доставки',
+                    'SLA мониторинг',
+                    'Методы оплаты',
+                    'Источники заказов',
+                    'Возвраты/корректировки'
+                ]
+            },
+            {
+                id: 'catalog',
+                index: '02',
+                title: 'Catalog & Kitchen',
+                submenu: [
+                    'Категории меню',
+                    'Позиции (блюда, напитки)',
+                    'Модификаторы/добавки',
+                    'Комбо/сеты',
+                    'Прайс-листы по каналам',
+                    'Медиа/печать/QR',
+                    'Техкарты (рецептуры)',
+                    'Версии техкарт',
+                    'Ингредиенты',
+                    'Полуфабрикаты',
+                    'Аллергены',
+                    'Пищевая ценность',
+                    'Рабочие станции',
+                    'Назначение поваров',
+                    'KDS очереди',
+                    'Планы выпуска',
+                    'KDS маршрутизация'
+                ]
+            },
+            {
+                id: 'stock',
+                index: '03',
+                title: 'Stock & Purchasing',
+                submenu: [
+                    'Остатки по точкам/ячейкам',
+                    'Приемка товаров',
+                    'Перемещения между складами',
+                    'Инвентаризация',
+                    'Мобильная инвентаризация',
+                    'Списания (порча, промо)',
+                    'Серии/партии',
+                    'FEFO контроль',
+                    'HACCP журналы',
+                    'Поставщики и договоры',
+                    'Заказы поставщикам',
+                    'Автозаказы по минимумам',
+                    'Графики поставок',
+                    'Сверки и дебиторка'
+                ]
+            },
+            {
+                id: 'crm',
+                index: '04',
+                title: 'CRM & Loyalty',
+                submenu: [
+                    'Профили гостей',
+                    'Согласия GDPR',
+                    'Сегменты (RFM, VIP)',
+                    'История заказов',
+                    'Уровни лояльности',
+                    'Бонусы/кешбэк',
+                    'Подарочные карты',
+                    'Сертификаты',
+                    'Промокоды',
+                    'Push-уведомления',
+                    'SMS-кампании',
+                    'Email-рассылки',
+                    'Мессенджеры',
+                    'Автотриггеры',
+                    'День рождения',
+                    'Брошенная корзина',
+                    'NPS опросы',
+                    'Отзывы и модерация'
+                ]
+            },
+            {
+                id: 'finance',
+                index: '05',
+                title: 'Finance & Cashier',
+                submenu: [
+                    'Методы оплат',
+                    'Эквайринг',
+                    'Сверка касс (X/Z отчеты)',
+                    'Кассовые смены',
+                    'Налоги и ставки',
+                    'Возвраты/чарджбеки',
+                    'Терминалы и принтеры',
+                    'Фискальные устройства',
+                    'Кассиры и права',
+                    'Шаблоны чеков'
+                ]
+            },
+            {
+                id: 'analytics',
+                index: '06',
+                title: 'Analytics & BI',
+                submenu: [
+                    'Дашборд выручки',
+                    'Средний чек',
+                    'SLA кухни',
+                    'Food-cost анализ',
+                    'Меню-микс (ABC/XYZ)',
+                    'Анализ маржи',
+                    'Отчет потерь',
+                    'Эффективность персонала',
+                    'Конструктор OLAP',
+                    'Планировщик экспортов'
+                ]
+            },
+            {
+                id: 'tasks',
+                index: '07',
+                title: 'Tasks & Quality',
+                submenu: [
+                    'Чек-листы смен',
+                    'Открытие/закрытие',
+                    'Инциденты',
+                    'RCA анализ',
+                    'Аудиты качества',
+                    'SOP регламенты',
+                    'Инструкции',
+                    'Тесты и обучение',
+                    'SLA алерты',
+                    'Температурные события',
+                    'Холодильники мониторинг'
+                ]
+            },
+            {
+                id: 'integrations',
+                index: '08',
+                title: 'Integrations',
+                submenu: [
+                    'Агрегаторы доставки',
+                    'Маркетплейсы',
+                    'Платежные системы',
+                    'ERP системы',
+                    'Бухгалтерия',
+                    'Витрина/сайт',
+                    'Мобильные приложения',
+                    'Webhooks настройка',
+                    'API ключи',
+                    'Логи интеграций'
+                ]
+            },
+            {
+                id: 'admin',
+                index: '09',
+                title: 'Admin',
+                submenu: [
+                    'Организации',
+                    'Сети ресторанов',
+                    'Точки продаж',
+                    'Залы и зоны',
+                    'Устройства (KDS, принтеры)',
+                    'Весы и сканеры',
+                    'Пользователи',
+                    'Роли (RBAC)',
+                    'Локализация',
+                    'Валюты',
+                    'Налоги',
+                    'Безопасность (2FA, SSO)',
+                    'Логи аудита',
+                    'Резервные копии'
+                ]
+            },
+            {
+                id: 'dispatcher',
+                index: '10',
+                title: 'Dispatcher',
+                submenu: [
+                    'Доска распределения',
+                    'AUTO режим',
+                    'MANUAL режим',
+                    'HYBRID AI режим',
+                    'Карта заказов',
+                    'Батч-доставка',
+                    'SLA мониторинг',
+                    'Компенсации',
+                    'Курьеры онлайн',
+                    'Пробки и ETA',
+                    'Настройки алгоритма',
+                    'Логи распределения'
+                ]
+            }
+        ];
+
+        // Page templates
+        const pageTemplates = {
+            dashboard: `
+                <div class="page active" id="dashboard">
+                    <div class="page-header">
+                        <h1 class="page-title">Dashboard</h1>
+                        <p class="page-desc">Реал-тайм метрики и оперативное управление</p>
+                    </div>
+                    <div class="metrics-grid">
+                        <div class="metric-card" onclick="showMetricDetails('revenue')">
+                            <span class="metric-live"></span>
+                            <div class="metric-value">₽1,234,567</div>
+                            <div class="metric-label">Выручка сегодня</div>
+                            <div class="metric-change positive">↑ 12.3% vs вчера</div>
+                        </div>
+                        <div class="metric-card" onclick="showMetricDetails('orders')">
+                            <span class="metric-live"></span>
+                            <div class="metric-value">847</div>
+                            <div class="metric-label">Заказов</div>
+                            <div class="metric-change positive">↑ 8.7%</div>
+                        </div>
+                        <div class="metric-card" onclick="showMetricDetails('avg-check')">
+                            <div class="metric-value">₽1,458</div>
+                            <div class="metric-label">Средний чек</div>
+                            <div class="metric-change negative">↓ 2.1%</div>
+                        </div>
+                        <div class="metric-card" onclick="showMetricDetails('kitchen-time')">
+                            <div class="metric-value">2:34</div>
+                            <div class="metric-label">Время на кухне</div>
+                            <div class="metric-change positive">↑ 23 сек</div>
+                        </div>
+                        <div class="metric-card" onclick="showMetricDetails('food-cost')">
+                            <div class="metric-value">31.2%</div>
+                            <div class="metric-label">Food Cost</div>
+                            <div class="metric-change negative">↓ 1.4%</div>
+                        </div>
+                        <div class="metric-card" onclick="showMetricDetails('sla')">
+                            <div class="metric-value">94.3%</div>
+                            <div class="metric-label">SLA выполнение</div>
+                            <div class="metric-change positive">↑ 2.8%</div>
+                        </div>
+                        <div class="metric-card" onclick="showMetricDetails('couriers')">
+                            <div class="metric-value">12/15</div>
+                            <div class="metric-label">Курьеров на линии</div>
+                        </div>
+                        <div class="metric-card" onclick="showMetricDetails('tables')">
+                            <div class="metric-value">23/40</div>
+                            <div class="metric-label">Занято столов</div>
+                        </div>
+                    </div>
+                    <div class="section">
+                        <div class="section-header">
+                            <h2 class="section-title">Критические алерты</h2>
+                            <button class="btn" onclick="showAllAlerts()">Все алерты</button>
+                        </div>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Время</th>
+                                    <th>Модуль</th>
+                                    <th>Событие</th>
+                                    <th>Приоритет</th>
+                                    <th>Действие</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr onclick="showAlertDetails(1)">
+                                    <td>14:28</td>
+                                    <td>Stock</td>
+                                    <td>Критический остаток: Томаты черри (2.3/5.0 кг)</td>
+                                    <td><span class="status error">ВЫСОКИЙ</span></td>
+                                    <td><button class="btn" onclick="event.stopPropagation(); orderStock('tomatoes')">Заказать</button></td>
+                                </tr>
+                                <tr onclick="showAlertDetails(2)">
+                                    <td>14:15</td>
+                                    <td>Dispatcher</td>
+                                    <td>SLA под угрозой: Заказ #2843 (осталось 5 мин)</td>
+                                    <td><span class="status warning">СРЕДНИЙ</span></td>
+                                    <td><button class="btn" onclick="event.stopPropagation(); reassignOrder(2843)">Переназначить</button></td>
+                                </tr>
+                                <tr onclick="showAlertDetails(3)">
+                                    <td>13:45</td>
+                                    <td>Kitchen</td>
+                                    <td>Станция "Горячее" перегружена (12 заказов в очереди)</td>
+                                    <td><span class="status warning">СРЕДНИЙ</span></td>
+                                    <td><button class="btn" onclick="event.stopPropagation(); distributeOrders()">Распределить</button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="section">
+                        <h2 class="section-title">График выручки за день</h2>
+                        <div class="chart-container">
+                            <div class="chart-placeholder">График выручки по часам</div>
+                        </div>
+                    </div>
+                </div>
+            `,
+            sales: `
+                <div class="page" id="sales">
+                    <div class="page-header">
+                        <h1 class="page-title">Sales</h1>
+                        <p class="page-desc">Управление продажами и заказами</p>
+                    </div>
+                    <div class="tabs">
+                        <div class="tab active" onclick="showSalesTab('orders')">Заказы</div>
+                        <div class="tab" onclick="showSalesTab('hall')">Зал</div>
+                        <div class="tab" onclick="showSalesTab('delivery')">Доставка</div>
+                        <div class="tab" onclick="showSalesTab('booking')">Бронирования</div>
+                        <div class="tab" onclick="showSalesTab('payments')">Оплаты</div>
+                        <div class="tab" onclick="showSalesTab('returns')">Возвраты</div>
+                    </div>
+                    <div class="filters-panel" id="salesFilters">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label">Период</label>
+                                <select class="form-select">
+                                    <option>Сегодня</option>
+                                    <option>Вчера</option>
+                                    <option>Неделя</option>
+                                    <option>Месяц</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Статус</label>
+                                <select class="form-select">
+                                    <option>Все</option>
+                                    <option>Новые</option>
+                                    <option>В работе</option>
+                                    <option>Готовы</option>
+                                    <option>Доставляются</option>
+                                    <option>Завершены</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Источник</label>
+                                <select class="form-select">
+                                    <option>Все</option>
+                                    <option>Сайт</option>
+                                    <option>Приложение</option>
+                                    <option>Яндекс.Еда</option>
+                                    <option>Delivery Club</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Тип</label>
+                                <select class="form-select">
+                                    <option>Все</option>
+                                    <option>Доставка</option>
+                                    <option>Самовывоз</option>
+                                    <option>В зале</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="section">
+                        <div class="section-header">
+                            <h2 class="section-title">Текущие заказы</h2>
+                            <div>
+                                <button class="btn success" onclick="createOrder()">+ Новый заказ</button>
+                            </div>
+                        </div>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>№</th>
+                                    <th>Время</th>
+                                    <th>Клиент</th>
+                                    <th>Тип</th>
+                                    <th>Сумма</th>
+                                    <th>Статус</th>
+                                    <th>Оплата</th>
+                                    <th>Курьер</th>
+                                    <th>SLA</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ordersTableBody">
+                                <tr onclick="showOrderDetails(2847)">
+                                    <td>#2847</td>
+                                    <td>14:25</td>
+                                    <td>Иванов И.И.</td>
+                                    <td>Доставка</td>
+                                    <td>₽1,250</td>
+                                    <td><span class="status warning">Готовится</span></td>
+                                    <td>Оплачено</td>
+                                    <td>К-001</td>
+                                    <td>28:30</td>
+                                    <td>
+                                        <button class="btn" onclick="event.stopPropagation(); editOrder(2847)">✏️</button>
+                                        <button class="btn danger" onclick="event.stopPropagation(); cancelOrder(2847)">✕</button>
+                                    </td>
+                                </tr>
+                                <tr onclick="showOrderDetails(2848)">
+                                    <td>#2848</td>
+                                    <td>14:30</td>
+                                    <td>Петрова А.С.</td>
+                                    <td>Самовывоз</td>
+                                    <td>₽890</td>
+                                    <td><span class="status info">Новый</span></td>
+                                    <td>При получении</td>
+                                    <td>-</td>
+                                    <td>29:15</td>
+                                    <td>
+                                        <button class="btn" onclick="event.stopPropagation(); editOrder(2848)">✏️</button>
+                                        <button class="btn danger" onclick="event.stopPropagation(); cancelOrder(2848)">✕</button>
+                                    </td>
+                                </tr>
+                                <tr onclick="showOrderDetails(2849)">
+                                    <td>#2849</td>
+                                    <td>14:32</td>
+                                    <td>ООО "Компания"</td>
+                                    <td>Доставка</td>
+                                    <td>₽2,340</td>
+                                    <td><span class="status info">Новый</span></td>
+                                    <td>Безнал</td>
+                                    <td>-</td>
+                                    <td>30:00</td>
+                                    <td>
+                                        <button class="btn" onclick="event.stopPropagation(); editOrder(2849)">✏️</button>
+                                        <button class="btn danger" onclick="event.stopPropagation(); cancelOrder(2849)">✕</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `,
+            catalog: `
+                <div class="page" id="catalog">
+                    <div class="page-header">
+                        <h1 class="page-title">Catalog & Kitchen</h1>
+                        <p class="page-desc">Управление меню и кухней</p>
+                    </div>
+                    <div class="tabs">
+                        <div class="tab active" onclick="showCatalogTab('menu')">Меню</div>
+                        <div class="tab" onclick="showCatalogTab('recipes')">Техкарты</div>
+                        <div class="tab" onclick="showCatalogTab('ingredients')">Ингредиенты</div>
+                        <div class="tab" onclick="showCatalogTab('kds')">KDS</div>
+                        <div class="tab" onclick="showCatalogTab('stations')">Станции</div>
+                        <div class="tab" onclick="showCatalogTab('allergens')">Аллергены</div>
+                    </div>
+                    <div class="form-section">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label">Категория</label>
+                                <select class="form-select">
+                                    <option>Все категории</option>
+                                    <option>Закуски</option>
+                                    <option>Салаты</option>
+                                    <option>Супы</option>
+                                    <option>Горячие блюда</option>
+                                    <option>Десерты</option>
+                                    <option>Напитки</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Статус</label>
+                                <select class="form-select">
+                                    <option>Активные</option>
+                                    <option>Неактивные</option>
+                                    <option>Сезонные</option>
+                                    <option>Стоп-лист</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Поиск</label>
+                                <input type="text" class="form-input" placeholder="Название блюда...">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">&nbsp;</label>
+                                <button class="btn primary">Найти</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="section">
+                        <div class="section-header">
+                            <h2 class="section-title">Позиции меню</h2>
+                            <button class="btn primary" onclick="addMenuItem()">+ Добавить блюдо</button>
+                        </div>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Код</th>
+                                    <th>Название</th>
+                                    <th>Категория</th>
+                                    <th>Цена</th>
+                                    <th>Себест.</th>
+                                    <th>Наценка</th>
+                                    <th>Вес</th>
+                                    <th>Калории</th>
+                                    <th>Статус</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr onclick="showMenuItemDetails('D001')">
+                                    <td>D001</td>
+                                    <td>Цезарь с курицей</td>
+                                    <td>Салаты</td>
+                                    <td>₽450</td>
+                                    <td>₽135</td>
+                                    <td>233%</td>
+                                    <td>250г</td>
+                                    <td>320</td>
+                                    <td><span class="status success">Активно</span></td>
+                                    <td>
+                                        <button class="btn" onclick="event.stopPropagation(); editMenuItem('D001')">✏️</button>
+                                        <button class="btn" onclick="event.stopPropagation(); duplicateMenuItem('D001')">📋</button>
+                                    </td>
+                                </tr>
+                                <tr onclick="showMenuItemDetails('D002')">
+                                    <td>D002</td>
+                                    <td>Борщ классический</td>
+                                    <td>Супы</td>
+                                    <td>₽320</td>
+                                    <td>₽87</td>
+                                    <td>268%</td>
+                                    <td>300мл</td>
+                                    <td>180</td>
+                                    <td><span class="status success">Активно</span></td>
+                                    <td>
+                                        <button class="btn" onclick="event.stopPropagation(); editMenuItem('D002')">✏️</button>
+                                        <button class="btn" onclick="event.stopPropagation(); duplicateMenuItem('D002')">📋</button>
+                                    </td>
+                                </tr>
+                                <tr onclick="showMenuItemDetails('D003')">
+                                    <td>D003</td>
+                                    <td>Стейк рибай</td>
+                                    <td>Горячие блюда</td>
+                                    <td>₽1,890</td>
+                                    <td>₽630</td>
+                                    <td>200%</td>
+                                    <td>300г</td>
+                                    <td>450</td>
+                                    <td><span class="status warning">Мало</span></td>
+                                    <td>
+                                        <button class="btn" onclick="event.stopPropagation(); editMenuItem('D003')">✏️</button>
+                                        <button class="btn" onclick="event.stopPropagation(); duplicateMenuItem('D003')">📋</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="section">
+                        <h2 class="section-title">KDS - Кухонный дисплей</h2>
+                        <div class="kds-grid">
+                            <div class="kds-order">
+                                <div class="kds-header">
+                                    <span>Заказ #2847</span>
+                                    <span class="kds-timer">03:45</span>
+                                </div>
+                                <div class="kds-item">1x Цезарь с курицей</div>
+                                <div class="kds-mod">- без анчоусов</div>
+                                <div class="kds-item">1x Борщ классический</div>
+                                <div class="kds-item">2x Капучино</div>
+                            </div>
+                            <div class="kds-order urgent">
+                                <div class="kds-header">
+                                    <span>Заказ #2845</span>
+                                    <span class="kds-timer">12:30</span>
+                                </div>
+                                <div class="kds-item">1x Стейк рибай</div>
+                                <div class="kds-mod">- medium rare</div>
+                                <div class="kds-item">1x Картофель фри</div>
+                            </div>
+                            <div class="kds-order">
+                                <div class="kds-header">
+                                    <span>Заказ #2848</span>
+                                    <span class="kds-timer">01:15</span>
+                                </div>
+                                <div class="kds-item">2x Том ям</div>
+                                <div class="kds-item">1x Пад тай</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `,
+            stock: `
+                <div class="page" id="stock">
+                    <div class="page-header">
+                        <h1 class="page-title">Stock & Purchasing</h1>
+                        <p class="page-desc">Управление складскими запасами и закупками</p>
+                    </div>
+                    <div class="tabs">
+                        <div class="tab active" onclick="showStockTab('inventory')">Остатки</div>
+                        <div class="tab" onclick="showStockTab('receiving')">Приемка</div>
+                        <div class="tab" onclick="showStockTab('transfer')">Перемещения</div>
+                        <div class="tab" onclick="showStockTab('count')">Инвентаризация</div>
+                        <div class="tab" onclick="showStockTab('writeoff')">Списания</div>
+                        <div class="tab" onclick="showStockTab('fefo')">FEFO/HACCP</div>
+                        <div class="tab" onclick="showStockTab('suppliers')">Поставщики</div>
+                        <div class="tab" onclick="showStockTab('orders')">Заказы</div>
+                    </div>
+                    <div class="metrics-grid">
+                        <div class="metric-card">
+                            <div class="metric-value">₽3,456,789</div>
+                            <div class="metric-label">Стоимость остатков</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value">1,234</div>
+                            <div class="metric-label">SKU на складе</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value">23</div>
+                            <div class="metric-label">Критические остатки</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value">7</div>
+                            <div class="metric-label">Ожидается поставок</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value">₽45,670</div>
+                            <div class="metric-label">В пути</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value">3</div>
+                            <div class="metric-label">Просроченных</div>
+                        </div>
+                    </div>
+                    <div class="section">
+                        <div class="section-header">
+                            <h2 class="section-title">Критические остатки</h2>
+                            <button class="btn danger" onclick="orderAllCritical()">Заказать все</button>
+                        </div>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>SKU</th>
+                                    <th>Наименование</th>
+                                    <th>Остаток</th>
+                                    <th>Мин</th>
+                                    <th>Макс</th>
+                                    <th>Ед.</th>
+                                    <th>Дней хватит</th>
+                                    <th>Поставщик</th>
+                                    <th>Последняя поставка</th>
+                                    <th>Действие</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr onclick="showStockDetails('ING-0234')">
+                                    <td>ING-0234</td>
+                                    <td>Томаты черри</td>
+                                    <td style="color: red; font-weight: bold;">2.3</td>
+                                    <td>5.0</td>
+                                    <td>20.0</td>
+                                    <td>кг</td>
+                                    <td>0.5</td>
+                                    <td>ООО "ПродОпт"</td>
+                                    <td>15.09.2025</td>
+                                    <td><button class="btn danger" onclick="event.stopPropagation(); orderStock('ING-0234')">Заказать</button></td>
+                                </tr>
+                                <tr onclick="showStockDetails('ING-0456')">
+                                    <td>ING-0456</td>
+                                    <td>Сливки 33%</td>
+                                    <td style="color: orange; font-weight: bold;">3.5</td>
+                                    <td>5.0</td>
+                                    <td>15.0</td>
+                                    <td>л</td>
+                                    <td>1.2</td>
+                                    <td>ООО "Молоко"</td>
+                                    <td>16.09.2025</td>
+                                    <td><button class="btn warning" onclick="event.stopPropagation(); orderStock('ING-0456')">Заказать</button></td>
+                                </tr>
+                                <tr onclick="showStockDetails('ING-0789')">
+                                    <td>ING-0789</td>
+                                    <td>Лосось норвежский</td>
+                                    <td style="color: orange; font-weight: bold;">4.2</td>
+                                    <td>10.0</td>
+                                    <td>30.0</td>
+                                    <td>кг</td>
+                                    <td>1.5</td>
+                                    <td>ИП Морепродукты</td>
+                                    <td>17.09.2025</td>
+                                    <td><button class="btn warning" onclick="event.stopPropagation(); orderStock('ING-0789')">Заказать</button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="section">
+                        <h2 class="section-title">HACCP журнал - Температурный контроль</h2>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Время</th>
+                                    <th>Холодильник</th>
+                                    <th>Температура</th>
+                                    <th>Норма</th>
+                                    <th>Статус</th>
+                                    <th>Сотрудник</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>14:00</td>
+                                    <td>Холодильник №1 (Мясо)</td>
+                                    <td>+2°C</td>
+                                    <td>0..+4°C</td>
+                                    <td><span class="status success">НОРМА</span></td>
+                                    <td>Петров А.А.</td>
+                                </tr>
+                                <tr>
+                                    <td>14:00</td>
+                                    <td>Морозильник №1</td>
+                                    <td>-18°C</td>
+                                    <td>-18..-24°C</td>
+                                    <td><span class="status success">НОРМА</span></td>
+                                    <td>Петров А.А.</td>
+                                </tr>
+                                <tr>
+                                    <td>14:00</td>
+                                    <td>Холодильник №3 (Овощи)</td>
+                                    <td>+7°C</td>
+                                    <td>+4..+8°C</td>
+                                    <td><span class="status success">НОРМА</span></td>
+                                    <td>Петров А.А.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `,
+            dispatcher: `
+                <div class="page" id="dispatcher">
+                    <div class="page-header">
+                        <h1 class="page-title">Dispatcher</h1>
+                        <p class="page-desc">Интеллектуальное распределение заказов</p>
+                    </div>
+                    <div class="tabs">
+                        <div class="tab active" onclick="showDispatcherTab('board')">Доска распределения</div>
+                        <div class="tab" onclick="showDispatcherTab('map')">Карта</div>
+                        <div class="tab" onclick="showDispatcherTab('couriers')">Курьеры</div>
+                        <div class="tab" onclick="showDispatcherTab('sla')">SLA</div>
+                        <div class="tab" onclick="showDispatcherTab('settings')">Настройки</div>
+                        <div class="tab" onclick="showDispatcherTab('logs')">Логи</div>
+                    </div>
+                    <div class="form-section">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label">Режим распределения</label>
+                                <select class="form-select" id="dispatchMode">
+                                    <option value="auto">AUTO - Полная автоматизация</option>
+                                    <option value="manual">MANUAL - Ручное управление</option>
+                                    <option value="hybrid">HYBRID - AI предложения</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Приоритет</label>
+                                <select class="form-select">
+                                    <option>SLA время</option>
+                                    <option>VIP клиенты</option>
+                                    <option>Минимальный путь</option>
+                                    <option>Загрузка курьеров</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Батчинг</label>
+                                <select class="form-select">
+                                    <option>Включен (макс 3 заказа)</option>
+                                    <option>Выключен</option>
+                                    <option>Умный (по маршруту)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Карты</label>
+                                <select class="form-select">
+                                    <option>Яндекс (пробки)</option>
+                                    <option>Google Maps</option>
+                                    <option>2GIS</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="dispatcher-container">
+                        <!-- New Orders -->
+                        <div class="dispatcher-panel">
+                            <div class="dispatcher-header">
+                                <span>НОВЫЕ ЗАКАЗЫ (<span id="newOrdersCount">3</span>)</span>
+                                <button class="btn" onclick="autoAssign()">Авто</button>
+                            </div>
+                            <div id="newOrdersList">
+                                <div class="order-card" draggable="true" data-order-id="2847">
+                                    <div class="order-id">#2847</div>
+                                    <div class="order-info">₽1,250 • 3 позиции • ул. Ленина 45</div>
+                                    <div class="order-info">VIP клиент • Оплачено картой</div>
+                                    <div class="order-timer">SLA: <span class="timer-value">28:30</span></div>
+                                </div>
+                                <div class="order-card" draggable="true" data-order-id="2848">
+                                    <div class="order-id">#2848</div>
+                                    <div class="order-info">₽890 • 2 позиции • пр. Мира 12</div>
+                                    <div class="order-info">Новый клиент • Наличные</div>
+                                    <div class="order-timer">SLA: <span class="timer-value">29:15</span></div>
+                                </div>
+                                <div class="order-card" draggable="true" data-order-id="2849">
+                                    <div class="order-id">#2849</div>
+                                    <div class="order-info">₽2,340 • 5 позиций • ул. Гагарина 78</div>
+                                    <div class="order-info">Корпоративный • Безнал</div>
+                                    <div class="order-timer">SLA: <span class="timer-value">30:00</span></div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Map -->
+                        <div class="dispatcher-panel">
+                            <div class="dispatcher-header">
+                                <span>КАРТА РАСПРЕДЕЛЕНИЯ</span>
+                                <button class="btn" onclick="refreshMap()">Обновить</button>
+                            </div>
+                            <div class="map-container">
+                                <div class="map-grid"></div>
+                                <!-- Branch -->
+                                <div class="map-point branch" style="top: 50%; left: 50%;"></div>
+                                <!-- Couriers -->
+                                <div class="map-point courier" style="top: 40%; left: 60%;"></div>
+                                <div class="map-point courier" style="top: 60%; left: 45%;"></div>
+                                <div class="map-point courier" style="top: 35%; left: 55%;"></div>
+                                <!-- Orders -->
+                                <div class="map-point order" style="top: 30%; left: 70%;"></div>
+                                <div class="map-point order" style="top: 65%; left: 35%;"></div>
+                                <div class="map-point order" style="top: 45%; left: 75%;"></div>
+                                <!-- Legend -->
+                                <div class="map-legend">
+                                    <div class="legend-item">
+                                        <div class="legend-dot" style="background: #ff0;"></div>
+                                        <span>Ресторан</span>
+                                    </div>
+                                    <div class="legend-item">
+                                        <div class="legend-dot" style="background: #0ff;"></div>
+                                        <span>Курьеры</span>
+                                    </div>
+                                    <div class="legend-item">
+                                        <div class="legend-dot" style="background: #f0f;"></div>
+                                        <span>Заказы</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Couriers -->
+                        <div class="dispatcher-panel">
+                            <div class="dispatcher-header">
+                                <span>КУРЬЕРЫ (<span id="couriersOnline">12</span>/<span id="couriersTotal">15</span>)</span>
+                                <button class="btn" onclick="callCourier()">Позвать</button>
+                            </div>
+                            <div id="couriersList">
+                                <div class="courier-card" data-courier-id="K001">
+                                    <div class="courier-name">Иванов А. [К-001]</div>
+                                    <div class="courier-stats">
+                                        <span>Заказов: 2</span>
+                                        <span>Путь: 4.2км</span>
+                                        <span>ETA: 12м</span>
+                                    </div>
+                                </div>
+                                <div class="courier-card" data-courier-id="K002">
+                                    <div class="courier-name">Петров С. [К-002]</div>
+                                    <div class="courier-stats">
+                                        <span>Заказов: 1</span>
+                                        <span>Путь: 2.8км</span>
+                                        <span>ETA: 8м</span>
+                                    </div>
+                                </div>
+                                <div class="courier-card" data-courier-id="K003">
+                                    <div class="courier-name">Сидоров К. [К-003]</div>
+                                    <div class="courier-stats">
+                                        <span>Заказов: 0</span>
+                                        <span>Свободен</span>
+                                        <span>На базе</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="section">
+                        <h2 class="section-title">SLA Мониторинг</h2>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Заказ</th>
+                                    <th>Клиент</th>
+                                    <th>Адрес</th>
+                                    <th>Время заказа</th>
+                                    <th>SLA</th>
+                                    <th>Осталось</th>
+                                    <th>Курьер</th>
+                                    <th>Статус</th>
+                                    <th>Риск</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>#2843</td>
+                                    <td>VIP клиент</td>
+                                    <td>ул. Пушкина 10</td>
+                                    <td>13:45</td>
+                                    <td>45 мин</td>
+                                    <td style="color: red;">5 мин</td>
+                                    <td>К-005</td>
+                                    <td><span class="status warning">В пути</span></td>
+                                    <td><span class="status error">ВЫСОКИЙ</span></td>
+                                </tr>
+                                <tr>
+                                    <td>#2844</td>
+                                    <td>Обычный</td>
+                                    <td>пр. Ленина 25</td>
+                                    <td>14:00</td>
+                                    <td>45 мин</td>
+                                    <td>20 мин</td>
+                                    <td>К-002</td>
+                                    <td><span class="status info">Готовится</span></td>
+                                    <td><span class="status success">НИЗКИЙ</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `,
+            crm: `
+                <div class="page" id="crm">
+                    <div class="page-header">
+                        <h1 class="page-title">CRM & Loyalty</h1>
+                        <p class="page-desc">Управление клиентами и программой лояльности</p>
+                    </div>
+                    <div class="tabs">
+                        <div class="tab active" onclick="showCRMTab('guests')">Гости</div>
+                        <div class="tab" onclick="showCRMTab('segments')">Сегменты</div>
+                        <div class="tab" onclick="showCRMTab('loyalty')">Лояльность</div>
+                        <div class="tab" onclick="showCRMTab('campaigns')">Кампании</div>
+                        <div class="tab" onclick="showCRMTab('reviews')">Отзывы</div>
+                        <div class="tab" onclick="showCRMTab('nps')">NPS</div>
+                    </div>
+                    <div class="metrics-grid">
+                        <div class="metric-card">
+                            <div class="metric-value">12,456</div>
+                            <div class="metric-label">Всего гостей</div>
+                            <div class="metric-change positive">↑ 234 за неделю</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value">3,567</div>
+                            <div class="metric-label">Активных</div>
+                            <div class="metric-change positive">↑ 12%</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value">₽2,450</div>
+                            <div class="metric-label">Средний LTV</div>
+                            <div class="metric-change positive">↑ 8%</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value">4.6</div>
+                            <div class="metric-label">Средний рейтинг</div>
+                            <div class="metric-change positive">↑ 0.2</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value">67</div>
+                            <div class="metric-label">NPS</div>
+                            <div class="metric-change positive">↑ 5</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value">89%</div>
+                            <div class="metric-label">Удержание</div>
+                            <div class="metric-change negative">↓ 2%</div>
+                        </div>
+                    </div>
+                    <div class="section">
+                        <div class="section-header">
+                            <h2 class="section-title">Топ гостей</h2>
+                            <button class="btn primary" onclick="addGuest()">+ Добавить гостя</button>
+                        </div>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Имя</th>
+                                    <th>Телефон</th>
+                                    <th>Email</th>
+                                    <th>Сегмент</th>
+                                    <th>Заказов</th>
+                                    <th>Сумма</th>
+                                    <th>Бонусы</th>
+                                    <th>Последний визит</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr onclick="showGuestDetails('G001')">
+                                    <td>G001</td>
+                                    <td>Иванов Иван Иванович</td>
+                                    <td>+7 (999) 123-45-67</td>
+                                    <td>ivanov@mail.ru</td>
+                                    <td><span class="status success">VIP</span></td>
+                                    <td>156</td>
+                                    <td>₽234,567</td>
+                                    <td>5,678</td>
+                                    <td>Сегодня</td>
+                                    <td>
+                                        <button class="btn" onclick="event.stopPropagation(); editGuest('G001')">✏️</button>
+                                        <button class="btn" onclick="event.stopPropagation(); contactGuest('G001')">📧</button>
+                                    </td>
+                                </tr>
+                                <tr onclick="showGuestDetails('G002')">
+                                    <td>G002</td>
+                                    <td>Петрова Анна Сергеевна</td>
+                                    <td>+7 (999) 234-56-78</td>
+                                    <td>petrova@gmail.com</td>
+                                    <td><span class="status warning">Постоянный</span></td>
+                                    <td>45</td>
+                                    <td>₽67,890</td>
+                                    <td>1,234</td>
+                                    <td>3 дня назад</td>
+                                    <td>
+                                        <button class="btn" onclick="event.stopPropagation(); editGuest('G002')">✏️</button>
+                                        <button class="btn" onclick="event.stopPropagation(); contactGuest('G002')">📧</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="section">
+                        <h2 class="section-title">Активные кампании</h2>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Название</th>
+                                    <th>Тип</th>
+                                    <th>Сегмент</th>
+                                    <th>Период</th>
+                                    <th>Отправлено</th>
+                                    <th>Открыто</th>
+                                    <th>Конверсия</th>
+                                    <th>Статус</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>День рождения -20%</td>
+                                    <td>Автотриггер</td>
+                                    <td>Все</td>
+                                    <td>Постоянно</td>
+                                    <td>234</td>
+                                    <td>89%</td>
+                                    <td>45%</td>
+                                    <td><span class="status success">Активна</span></td>
+                                </tr>
+                                <tr>
+                                    <td>Возвращение VIP</td>
+                                    <td>Email</td>
+                                    <td>VIP спящие</td>
+                                    <td>01.09 - 30.09</td>
+                                    <td>567</td>
+                                    <td>67%</td>
+                                    <td>23%</td>
+                                    <td><span class="status success">Активна</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `
+        };
+
+        // Initialize
+        let currentModule = 'dashboard';
+        let currentSubmodule = '';
+        let notificationCount = 3;
+
+        // Generate navigation
+        function generateNavigation() {
+            const nav = document.getElementById('navModules');
+            modules.forEach(module => {
+                const moduleHtml = `
+                    <div class="nav-module">
+                        <div class="nav-header" data-module="${module.id}">
+                            <span class="nav-index">${module.index}</span>
+                            <span class="nav-title">${module.title}</span>
+                            <span class="nav-arrow">→</span>
+                        </div>
+                        <div class="nav-submenu">
+                            ${module.submenu.map(item => 
+                                `<a href="#" class="nav-subitem" data-module="${module.id}" data-submenu="${item}">${item}</a>`
+                            ).join('')}
+                        </div>
+                    </div>
+                `;
+                nav.innerHTML += moduleHtml;
+            });
+
+            // Add event listeners
+            document.querySelectorAll('.nav-header').forEach(header => {
+                header.addEventListener('click', function() {
+                    toggleModule(this);
+                });
+            });
+
+            document.querySelectorAll('.nav-subitem').forEach(item => {
+                item.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    selectSubmodule(this);
+                });
+            });
+        }
+
+        function toggleModule(header) {
+            const moduleId = header.dataset.module;
+            const submenu = header.nextElementSibling;
+            
+            if (header.classList.contains('expanded')) {
+                header.classList.remove('expanded');
+                submenu.classList.remove('active');
+            } else {
+                document.querySelectorAll('.nav-header').forEach(h => {
+                    h.classList.remove('expanded', 'active');
+                    h.nextElementSibling.classList.remove('active');
+                });
+                
+                header.classList.add('expanded', 'active');
+                submenu.classList.add('active');
+            }
+            
+            loadModule(moduleId);
+        }
+
+        function loadModule(moduleId) {
+            currentModule = moduleId;
+            currentSubmodule = '';
+            
+            const content = document.getElementById('content');
+            content.innerHTML = pageTemplates[moduleId] || generateDefaultPage(moduleId);
+            
+            const module = modules.find(m => m.id === moduleId);
+            document.getElementById('module-breadcrumb').textContent = module.title;
+            document.getElementById('sub-separator').style.display = 'none';
+            document.getElementById('sub-breadcrumb').textContent = '';
+            
+            // Initialize module-specific features
+            if (moduleId === 'dispatcher') {
+                initDispatcher();
+            }
+        }
+
+        function selectSubmodule(item) {
+            const moduleId = item.dataset.module;
+            const submenu = item.dataset.submenu;
+            
+            document.querySelectorAll('.nav-subitem').forEach(i => i.classList.remove('active'));
+            item.classList.add('active');
+            
+            currentSubmodule = submenu;
+            document.getElementById('sub-separator').style.display = 'inline';
+            document.getElementById('sub-breadcrumb').textContent = submenu;
+            
+            // Load submodule content
+            loadSubmoduleContent(moduleId, submenu);
+        }
+
+        function loadSubmoduleContent(moduleId, submenu) {
+            // This would load specific submodule content
+            console.log(`Loading ${moduleId} / ${submenu}`);
+            showModal(`${submenu}`, `Загрузка раздела "${submenu}"...`);
+        }
+
+        function generateDefaultPage(moduleId) {
+            const module = modules.find(m => m.id === moduleId);
+            return `
+                <div class="page active">
+                    <div class="page-header">
+                        <h1 class="page-title">${module.title}</h1>
+                        <p class="page-desc">Модуль в разработке</p>
+                    </div>
+                    <div class="section">
+                        <p>Выберите подраздел из меню слева</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Dispatcher functions
+        function initDispatcher() {
+            // Initialize drag and drop
+            document.querySelectorAll('.order-card').forEach(card => {
+                card.addEventListener('dragstart', handleDragStart);
+                card.addEventListener('dragend', handleDragEnd);
+            });
+
+            document.querySelectorAll('.dispatcher-panel').forEach(panel => {
+                panel.addEventListener('dragover', handleDragOver);
+                panel.addEventListener('drop', handleDrop);
+            });
+
+            // Start timers
+            startDispatcherTimers();
+        }
+
+        let draggedElement = null;
+
+        function handleDragStart(e) {
+            draggedElement = this;
+            this.classList.add('dragging');
+        }
+
+        function handleDragEnd(e) {
+            this.classList.remove('dragging');
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            if (draggedElement && this.querySelector('#newOrdersList, #couriersList')) {
+                const list = this.querySelector('#newOrdersList') || 
+                            this.querySelector('#couriersList');
+                if (list) {
+                    list.appendChild(draggedElement);
+                    updateOrderCounts();
+                }
+            }
+        }
+
+        function updateOrderCounts() {
+            const newOrdersCount = document.querySelectorAll('#newOrdersList .order-card').length;
+            document.getElementById('newOrdersCount').textContent = newOrdersCount;
+        }
+
+        function startDispatcherTimers() {
+            setInterval(() => {
+                document.querySelectorAll('.timer-value').forEach(timer => {
+                    const parts = timer.textContent.split(':');
+                    let minutes = parseInt(parts[0]);
+                    let seconds = parseInt(parts[1]);
+                    
+                    if (seconds > 0) {
+                        seconds--;
+                    } else if (minutes > 0) {
+                        minutes--;
+                        seconds = 59;
+                    }
+                    
+                    timer.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                    
+                    if (minutes < 5) {
+                        timer.parentElement.style.color = '#f00';
+                    } else if (minutes < 10) {
+                        timer.parentElement.style.color = '#fa0';
+                    }
+                });
+            }, 1000);
+        }
+
+        // Modal functions
+        function showModal(title, content, footer = true) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalBody').innerHTML = content;
+            document.getElementById('modalFooter').style.display = footer ? 'flex' : 'none';
+            document.getElementById('modal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+        }
+
+        function saveModal() {
+            // Save logic here
+            closeModal();
+            showNotification('Сохранено успешно', 'success');
+        }
+
+        // Notification functions
+        function toggleNotifications() {
+            const panel = document.getElementById('notificationsPanel');
+            panel.classList.toggle('active');
+            
+            if (panel.classList.contains('active')) {
+                loadNotifications();
+            }
+        }
+
+        function loadNotifications() {
+            const notifications = [
+                {
+                    time: '2 мин назад',
+                    title: 'Критический остаток',
+                    text: 'Томаты черри - осталось 2.3 кг',
+                    unread: true
+                },
+                {
+                    time: '15 мин назад',
+                    title: 'SLA предупреждение',
+                    text: 'Заказ #2843 - риск нарушения SLA',
+                    unread: true
+                },
+                {
+                    time: '1 час назад',
+                    title: 'Новый отзыв',
+                    text: 'Получен отзыв 5★ от гостя',
+                    unread: true
+                },
+                {
+                    time: '2 часа назад',
+                    title: 'Смена открыта',
+                    text: 'Смена #2847 успешно открыта',
+                    unread: false
+                }
+            ];
+            
+            const list = document.getElementById('notificationsList');
+            list.innerHTML = notifications.map(n => `
+                <div class="notification-item ${n.unread ? 'unread' : ''}" onclick="openNotification(this)">
+                    <div class="notification-time">${n.time}</div>
+                    <div class="notification-title">${n.title}</div>
+                    <div class="notification-text">${n.text}</div>
+                </div>
+            `).join('');
+            
+            // Update badge
+            const unreadCount = notifications.filter(n => n.unread).length;
+            document.getElementById('notificationBadge').textContent = unreadCount;
+            document.getElementById('notificationBadge').style.display = unreadCount > 0 ? 'block' : 'none';
+        }
+
+        function openNotification(element) {
+            element.classList.remove('unread');
+            // Open notification details
+        }
+
+        function showNotification(message, type = 'info') {
+            // This would show a toast notification
+            console.log(`${type}: ${message}`);
+        }
+
+        // Action functions
+        function toggleFilters() {
+            const filters = document.querySelector('.filters-panel');
+            if (filters) {
+                filters.classList.toggle('active');
+            }
+        }
+
+        function exportData() {
+            showModal('Экспорт данных', `
+                <div class="form-section">
+                    <div class="form-group">
+                        <label class="form-label">Формат</label>
+                        <select class="form-select">
+                            <option>Excel (.xlsx)</option>
+                            <option>CSV</option>
+                            <option>PDF</option>
+                            <option>JSON</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Период</label>
+                        <select class="form-select">
+                            <option>Текущий день</option>
+                            <option>Последняя неделя</option>
+                            <option>Последний месяц</option>
+                            <option>Произвольный период</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Email для отправки</label>
+                        <input type="email" class="form-input" placeholder="email@example.com">
+                    </div>
+                </div>
+            `);
+        }
+
+        function showCreateModal() {
+            const modalContent = {
+                dashboard: 'Создание виджета дашборда',
+                sales: 'Создание нового заказа',
+                catalog: 'Добавление блюда в меню',
+                stock: 'Создание заказа поставщику',
+                dispatcher: 'Создание задачи доставки',
+                crm: 'Добавление нового гостя'
+            };
+            
+            showModal('Создать', modalContent[currentModule] || 'Создание элемента');
+        }
+
+        // Quick action functions
+        function quickOrder() {
+            showModal('Быстрый заказ', `
+                <div class="form-section">
+                    <div class="form-group">
+                        <label class="form-label required">Клиент</label>
+                        <input type="text" class="form-input" placeholder="Имя или телефон">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">Тип заказа</label>
+                        <select class="form-select">
+                            <option>Доставка</option>
+                            <option>Самовывоз</option>
+                            <option>В зале</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Комментарий</label>
+                        <textarea class="form-textarea" placeholder="Особые пожелания"></textarea>
+                    </div>
+                </div>
+            `);
+        }
+
+        function quickSearch() {
+            showModal('Поиск', `
+                <div class="form-section">
+                    <div class="form-group">
+                        <label class="form-label">Что ищем?</label>
+                        <input type="text" class="form-input" placeholder="Заказ, клиент, блюдо..." autofocus>
+                    </div>
+                </div>
+            `, false);
+        }
+
+        function quickHelp() {
+            showModal('Справка', `
+                <div class="section">
+                    <h3>Горячие клавиши</h3>
+                    <p><strong>G</strong> - Показать/скрыть сетку</p>
+                    <p><strong>Ctrl+K</strong> - Быстрый поиск</p>
+                    <p><strong>Ctrl+N</strong> - Новый заказ</p>
+                    <p><strong>Esc</strong> - Закрыть окно</p>
+                </div>
+            `, false);
+        }
+
+        function showSecurityInfo() {
+            showModal('Безопасность', `
+                <div class="section">
+                    <p><strong>2FA</strong> - Двухфакторная аутентификация включена</p>
+                    <p><strong>SSL</strong> - Защищенное соединение активно</p>
+                    <p><strong>RBAC</strong> - Ролевая модель доступа настроена</p>
+                    <p><strong>Последний вход:</strong> 18.09.2025 09:15:23</p>
+                    <p><strong>IP адрес:</strong> 192.168.1.100</p>
+                    <p><strong>Сессия истекает:</strong> через 3ч 28мин</p>
+                </div>
+            `, false);
+        }
+
+        // Specific module functions
+        function showMetricDetails(metric) {
+            showModal(`Детали метрики: ${metric}`, 'График и детальная информация');
+        }
+
+        function showAlertDetails(id) {
+            showModal(`Алерт #${id}`, 'Детальная информация об алерте');
+        }
+
+        function showAllAlerts() {
+            loadModule('tasks');
+        }
+
+        function orderStock(item) {
+            showModal('Заказ товара', `Создание заказа для: ${item}`);
+        }
+
+        function reassignOrder(id) {
+            showModal(`Переназначение заказа #${id}`, 'Выберите нового курьера');
+        }
+
+        function distributeOrders() {
+            showModal('Распределение заказов', 'Настройки распределения');
+        }
+
+        function showOrderDetails(id) {
+            showModal(`Заказ #${id}`, 'Детальная информация о заказе');
+        }
+
+        function editOrder(id) {
+            showModal(`Редактирование заказа #${id}`, 'Форма редактирования');
+        }
+
+        function cancelOrder(id) {
+            if (confirm(`Отменить заказ #${id}?`)) {
+                showNotification(`Заказ #${id} отменен`, 'warning');
+            }
+        }
+
+        function createOrder() {
+            quickOrder();
+        }
+
+        function autoAssign() {
+            showNotification('Автоматическое распределение запущено', 'success');
+        }
+
+        function refreshMap() {
+            showNotification('Карта обновлена', 'info');
+        }
+
+        function callCourier() {
+            showModal('Вызов курьера', 'Выберите курьера для вызова');
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'g' || e.key === 'G') {
+                document.querySelector('.grid-overlay').classList.toggle('active');
+            }
+            if (e.key === 'Escape') {
+                closeModal();
+                document.getElementById('notificationsPanel').classList.remove('active');
+            }
+            if (e.ctrlKey && e.key === 'k') {
+                e.preventDefault();
+                quickSearch();
+            }
+            if (e.ctrlKey && e.key === 'n') {
+                e.preventDefault();
+                quickOrder();
+            }
+        });
+
+        // Time update
+        setInterval(() => {
+            const now = new Date();
+            const timeStr = now.toLocaleDateString('ru-RU') + ' ' + 
+                           now.toLocaleTimeString('ru-RU');
+            document.getElementById('current-time').textContent = timeStr;
+        }, 1000);
+
+        // Network status
+        window.addEventListener('online', () => {
+            document.body.classList.remove('offline');
+            document.querySelector('.status-indicator').classList.remove('offline');
+            document.getElementById('system-status').textContent = 'СИСТЕМА ONLINE';
+        });
+
+        window.addEventListener('offline', () => {
+            document.body.classList.add('offline');
+            document.querySelector('.status-indicator').classList.add('offline');
+            document.getElementById('system-status').textContent = 'СИСТЕМА OFFLINE';
+        });
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', function() {
+            generateNavigation();
+            loadModule('dashboard');
+            loadNotifications();
+        });
+
+        // Role switching
+        document.getElementById('roleSelect').addEventListener('change', function(e) {
+            const role = e.target.value;
+            showNotification(`Переключено на роль: ${e.target.options[e.target.selectedIndex].text}`, 'info');
+            // Here you would filter available modules based on role
+        });
+
+        // Additional page-specific functions
+        function showSalesTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            showNotification(`Загружена вкладка: ${tab}`, 'info');
+        }
+
+        function showCatalogTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            showNotification(`Загружена вкладка: ${tab}`, 'info');
+        }
+
+        function showStockTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            showNotification(`Загружена вкладка: ${tab}`, 'info');
+        }
+
+        function showDispatcherTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            showNotification(`Загружена вкладка: ${tab}`, 'info');
+        }
+
+        function showCRMTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            showNotification(`Загружена вкладка: ${tab}`, 'info');
+        }
+
+        // Menu item functions
+        function addMenuItem() {
+            showModal('Добавление блюда', 'Форма добавления нового блюда в меню');
+        }
+
+        function showMenuItemDetails(id) {
+            showModal(`Блюдо ${id}`, 'Детальная информация о блюде');
+        }
+
+        function editMenuItem(id) {
+            showModal(`Редактирование ${id}`, 'Форма редактирования блюда');
+        }
+
+        function duplicateMenuItem(id) {
+            showNotification(`Блюдо ${id} дублировано`, 'success');
+        }
+
+        // Stock functions
+        function showStockDetails(sku) {
+            showModal(`Товар ${sku}`, 'Детальная информация о товаре');
+        }
+
+        function orderAllCritical() {
+            showModal('Заказ критических остатков', 'Подтверждение заказа всех критических позиций');
+        }
+
+        // CRM functions
+        function addGuest() {
+            showModal('Добавление гостя', 'Форма регистрации нового гостя');
+        }
+
+        function showGuestDetails(id) {
+            showModal(`Гость ${id}`, 'Профиль гостя');
+        }
+
+        function editGuest(id) {
+            showModal(`Редактирование гостя ${id}`, 'Форма редактирования');
+        }
+
+        function contactGuest(id) {
+            showModal(`Связаться с гостем ${id}`, 'Выберите способ связи');
+        }
+    </script>
+</body>
+</html>
